@@ -23,6 +23,9 @@ app.post('/todos', (req, res) => { // callback can be a middleware function
 
 
 
+
 app.listen(3000, () => {
   console.log("Server up on port 3000");
 })
+
+module.exports = {app};
