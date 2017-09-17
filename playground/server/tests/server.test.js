@@ -4,8 +4,16 @@ const request = require('supertest');
 var {app} = require('./../server');
 var {Todo} = require('./../models/todo'); // {name} name is exactly the same as the one exported
 
+const todos = [{
+  text: "first todo"
+}, {
+  text: "second todo"
+}];
+
 beforeEach((done) => {
-  Todo.remove({}).then(() => done()); // removes all documents from the database.
+  Todo.remove({}).then(() => {
+    return Todo.insertMany(todos);
+  }).then(() => done()); // removes all documents from the database.
 }); // lets us run some code before any test case and only proceeds to
 // the test cases once we call done()
 
@@ -24,14 +32,43 @@ describe('POST /todos', () => {
         if (err) {
           return done(err);
         }
-        Todo.find().then((docs) => {
-          expect(docs.length).toBe(5);
-          expect(docs[0].text).toBe(text);
-          done();
-        }).catch((error) => done(err));
+        Todo.find({text})
+          .then((docs) => {
+            expect(docs.length).toBe(1);
+            expect(docs[0].text).toBe(text);
+            done();
+          })
+        .catch((error) => done(error));
+      });
+  });
+  it('should not create a todo when bad data is sent', (done) => {
+    request(app)
+      .post('/todos')
+      .send({})
+      .expect(400)
+      .end((err, res) => {
+        if (err) {
+          return done(err);
+        }
+        Todo.find()
+          .then((docs) => {
+            expect(docs.length).toBe(2);
+            done();
+          })
+          .catch((error) => done(error));
       });
   });
 });
+
+describe(' GET /todos', () => {
+  it('should fetch and return all the todos', (done) => {
+    request(app)
+      .get('/todos')
+      .send()
+      .expect(200, done)
+      });
+
+})
 // If you are using the .end() method .expect() assertions that fail will not
 // throw - they will return the assertion as an error to the .end() callback.
 // In order to fail the test case, you will need to rethrow or pass err to done()

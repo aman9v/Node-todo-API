@@ -15,7 +15,15 @@ app.post('/todos', (req, res) => { // callback can be a middleware function
     text: req.body.text,
   });
   todo.save().then((todo) => {
-     res.send(todo);
+     res.status(200).send(todo);
+  }, (error) => {
+    res.status(400).send(error);
+  });
+});
+
+app.get('/todos', (req, res) => {
+  Todo.find().then((docs) => {
+    res.send({docs}); // sending an object allows to add more properties to response like custom status codes.
   }, (error) => {
     res.status(400).send(error);
   });
