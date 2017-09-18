@@ -1,5 +1,6 @@
 /*jshint esversion: 6 */
 // server.js is just going to be used for creating routes.
+const _ = require('lodash');
 const express = require('express');
 var bodyParser = require('body-parser');
 const {ObjectID} = require('mongodb');
@@ -65,6 +66,29 @@ app.delete('/todos/:id', (req, res) => {
   }).catch((error) => {
     res.sendStatus(400);
   });
+});
+
+app.patch('/todos/:id', (req, res) => {
+  var id = req.params.id;
+  var body = _.pick(req.body, ['text', 'completed']);
+  // pick takes req.body and if text and completed exist, picks them up
+  if (!ObjectID.isValid(id)) {
+    return res.sendStatus(404);
+  }
+
+  if (_.isBoolean(body.completed) && body.completed) {
+    body.completedAt = new Date().getTime();
+  } else {
+    body.completed = false;
+    body.completedAt = null;
+  }
+
+  Todo.findByIdAndUpdate(id, { $set: body}, {new: true}).then((doc) => {
+    if (!doc) {
+      return res.sendStatus(404);
+    }
+    res.send({doc});
+  }).catch((error) => res.sendStatus(400));
 });
 
 app.listen(port, () => {
