@@ -100,6 +100,42 @@ describe('GET /todos/:id' , () => {
       .expect(404, done);
   });
 });
+
+describe('DELETE /todos/:id', () => {
+  it('should delete a todo from the database', (done) => {
+      var id = todos[0]._id.toHexString();
+
+      request(app)
+        .delete(`/todos/${id}`)
+        .expect(200)
+        .expect((res) => {
+          expect(res.body.doc._id).toBe(id);
+        })
+        .end((err, res) => {
+          if (err) {
+            return done(err);
+          }
+          Todo.findByIdAndRemove(id).then((doc) => {
+            expect(doc).toEqual(null);
+            done();
+          }).catch((error) => done(error));
+        });
+  });
+
+  it('should return a 404 if not found', (done) => {
+    var id = new ObjectID().toHexString();
+
+    request(app)
+      .delete(`/todos/${id}`)
+      .expect(404, done);
+  });
+
+  it('should return a 404 if object id is invalid', (done) => {
+    request(app)
+      .delete(`/todos/123abc`)
+      .expect(404,done);
+  });
+});
 // If you are using the .end() method .expect() assertions that fail will not
 // throw - they will return the assertion as an error to the .end() callback.
 // In order to fail the test case, you will need to rethrow or pass err to done()

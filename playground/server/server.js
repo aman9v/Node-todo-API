@@ -61,7 +61,7 @@ app.delete('/todos/:id', (req, res) => {
     if (!doc) {
       return res.sendStatus(404);
     }
-    res.send({doc});
+    res.send({doc}); // passed with the same name "doc"
   }).catch((error) => {
     res.sendStatus(400);
   });
