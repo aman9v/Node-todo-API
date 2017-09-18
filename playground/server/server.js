@@ -1,5 +1,8 @@
 /*jshint esversion: 6 */
 // server.js is just going to be used for creating routes.
+
+require('./config/config');
+
 const _ = require('lodash');
 const express = require('express');
 var bodyParser = require('body-parser');
@@ -11,7 +14,7 @@ var {User} = require('./models/user');
 
 var app = express();
 
-const port = process.env.PORT || 3000;
+const port = process.env.PORT ;
 
 app.use(bodyParser.json()); // .json() is returned that is used as middleware
 
