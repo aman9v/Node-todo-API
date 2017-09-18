@@ -11,7 +11,9 @@ const todos = [{
   text: "first todo",
 }, {
   _id: new ObjectID(),
-  text: "second todo"
+  text: "second todo",
+  completed: true,
+  completedAt: 3321
 }];
 
 beforeEach((done) => {
@@ -116,7 +118,7 @@ describe('DELETE /todos/:id', () => {
             return done(err);
           }
           Todo.findByIdAndRemove(id).then((doc) => {
-            expect(doc).toEqual(null);
+            expect(doc).toBeNull();
             done();
           }).catch((error) => done(error));
         });
@@ -134,6 +136,39 @@ describe('DELETE /todos/:id', () => {
     request(app)
       .delete(`/todos/123abc`)
       .expect(404,done);
+  });
+});
+
+describe("PATCH /todos/:id", () => {
+  it('should update the todo', (done) => {
+    var id = todos[0]._id.toHexString();
+    var text = "New Text";
+
+    request(app)
+      .patch(`/todos/${id}`)
+      .send({text, completed: true})
+      .expect(200)
+      .expect((result) => { // result holds the response that came back from the request
+        expect(result.body.doc.text).toBe(text);
+        expect(result.body.doc.completed).toBe(true);
+        expect(typeof(result.body.doc.completedAt)).toEqual('number');
+      }).end(done);
+  });
+
+  it('should clear completedAt when completed is false', (done) => {
+    var id = todos[0]._id.toHexString();
+    var text = "New Text Again";
+
+    request(app)
+      .patch(`/todos/${id}`)
+      .send({completed: false, text})
+      .expect(200)
+      .expect((result) => {
+        expect(result.body.doc.text).toBe(text);
+        expect(result.body.doc.completed).toBe(false);
+        expect(result.body.doc.completedAt).toBeNull();
+      })
+      .end(done);
   });
 });
 // If you are using the .end() method .expect() assertions that fail will not
