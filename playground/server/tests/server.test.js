@@ -1,12 +1,16 @@
+/*jshint esversion: 6 */
 const expect = require('expect');
 const request = require('supertest');
+const {ObjectID} = require('mongodb');
 
 var {app} = require('./../server');
 var {Todo} = require('./../models/todo'); // {name} name is exactly the same as the one exported
 
 const todos = [{
-  text: "first todo"
+  _id: new ObjectID(),
+  text: "first todo",
 }, {
+  _id: new ObjectID(),
   text: "second todo"
 }];
 
@@ -65,10 +69,37 @@ describe(' GET /todos', () => {
     request(app)
       .get('/todos')
       .send()
-      .expect(200, done)
+      .expect(200, done);
       });
+});
 
-})
+describe('GET /todos/:id' , () => {
+  it('should return todo doc', (done) => {
+    request(app) // supertest request
+      .get(`/todos/${todos[0]._id.toHexString()}`)
+      .expect(200)
+      .expect((res) => {
+        expect(res.body.doc.text).toBe(todos[0].text);
+      })
+      .end(done);
+    });
+
+
+
+  it('should return a 404 if todo not found', (done) => {
+    var id = new ObjectID().toHexString();
+    request(app)
+      .get(`/todos/${id}`)
+      .expect(404, done);
+  });
+
+  it('should return 404 for non-object ids', (done) => {
+    request(app)
+      .get('/todos/123abc')
+      .send()
+      .expect(404, done);
+  });
+});
 // If you are using the .end() method .expect() assertions that fail will not
 // throw - they will return the assertion as an error to the .end() callback.
 // In order to fail the test case, you will need to rethrow or pass err to done()

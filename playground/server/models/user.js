@@ -1,3 +1,4 @@
+/*jshint esversion: 6 */
 // each model maps to a collection in the database.
 // calling save returns a Promise.
 var mongoose = require('mongoose');
