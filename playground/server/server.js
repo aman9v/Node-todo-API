@@ -94,6 +94,24 @@ app.patch('/todos/:id', (req, res) => {
   }).catch((error) => res.sendStatus(400));
 });
 
+// model methods are called on Model object like Users and
+// instance methods are called on model instance like user.
+app.post('/users', (req, res) => {
+  var body = _.pick(req.body, ['email', 'password']);
+  var user = new User(body);
+
+  // User.findByToken(); // custom model method
+  // user.genereteAuthToken // generates a token for every user document
+  user.save().then((user) => {
+    return user.generateAuthToken();
+    // res.send({doc});
+  })
+  .then((token) => { // token is the success argument from user.js file
+    res.header('x-auth', token).send(user); // header takes key value pairs
+  }) // x before - means a custom header, not necessarily a header that HTTP supports by default
+  .catch((error) => res.status(400).send(error));
+});
+
 app.listen(port, () => {
   console.log(`Server up on port ${port}`);
 });
