@@ -11,10 +11,10 @@ const {ObjectID} = require('mongodb');
 var {mongoose} = require('./db/mongoose.js');
 var {Todo} = require('./models/todo');
 var {User} = require('./models/user');
-
+var authenticate = require('./middleware/authenticate').authenticate;
 var app = express();
 
-const port = process.env.PORT ;
+const port = process.env.PORT;
 
 app.use(bodyParser.json()); // .json() is returned that is used as middleware
 
@@ -103,7 +103,7 @@ app.post('/users', (req, res) => {
   // User.findByToken(); // custom model method
   // user.genereteAuthToken // generates a token for every user document
   user.save().then((user) => {
-    return user.generateAuthToken();
+    return user.generateAuthToken(); //this returns the token from the returned promise
     // res.send({doc});
   })
   .then((token) => { // token is the success argument from user.js file
@@ -112,6 +112,10 @@ app.post('/users', (req, res) => {
   .catch((error) => res.status(400).send(error));
 });
 
+// we could break out the below code in a middleware function so that it's available for other routes
+app.get('/users/me', authenticate, (req, res) => {
+  res.send(req.user);
+});
 app.listen(port, () => {
   console.log(`Server up on port ${port}`);
 });

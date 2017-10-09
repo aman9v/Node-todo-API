@@ -1,26 +1,16 @@
 /*jshint esversion: 6 */
 const expect = require('expect');
-const request = require('supertest');
+const request = require('supertest'); // changes made to expect are not needed for supertest expect.
 const {ObjectID} = require('mongodb');
 
+const {User} = require('./../models/user');
 var {app} = require('./../server');
 var {Todo} = require('./../models/todo'); // {name} name is exactly the same as the one exported
+const {todos, populateTodos, users, populateUsers} = require('./seed/seed');
 
-const todos = [{
-  _id: new ObjectID(),
-  text: "first todo",
-}, {
-  _id: new ObjectID(),
-  text: "second todo",
-  completed: true,
-  completedAt: 3321
-}];
-
-beforeEach((done) => {
-  Todo.remove({}).then(() => {
-    return Todo.insertMany(todos);
-  }).then(() => done()); // removes all documents from the database.
-}); // lets us run some code before any test case and only proceeds to
+beforeEach(populateUsers);
+// seed data was moved to its own separate file.
+beforeEach(populateTodos); // lets us run some code before any test case and only proceeds to
 // the test cases once we call done()
 
 describe('POST /todos', () => {
@@ -81,7 +71,7 @@ describe('GET /todos/:id' , () => {
       .get(`/todos/${todos[0]._id.toHexString()}`)
       .expect(200)
       .expect((res) => {
-        expect(res.body.doc.text).toBe(todos[0].text);
+        expect(res.body.doc.text).toBe(todos[0].text); // this expect is using the jest expect API
       })
       .end(done);
     });
@@ -135,7 +125,7 @@ describe('DELETE /todos/:id', () => {
   it('should return a 404 if object id is invalid', (done) => {
     request(app)
       .delete(`/todos/123abc`)
-      .expect(404,done);
+      .expect(404, done);
   });
 });
 
@@ -174,3 +164,74 @@ describe("PATCH /todos/:id", () => {
 // If you are using the .end() method .expect() assertions that fail will not
 // throw - they will return the assertion as an error to the .end() callback.
 // In order to fail the test case, you will need to rethrow or pass err to done()
+describe('GET /users/me', () => {
+  it('should return user if authenticated', (done) => {
+    request(app)
+      .get("/users/me")
+      .set("x-auth", users[0].tokens[0].token) // set(headername, headervalue)
+      .expect(200)
+      .expect((response) => {
+        expect(response.body._id).toBe(users[0]._id.toHexString());
+        expect(response.body.email).toBe(users[0].email);
+      })
+      .end(done);
+  });
+
+  it('should return 401 if not authenticated', (done) => {
+    request(app)
+      .get('/users/me')
+      .expect(401)
+      .end(done);
+  });
+});
+
+describe('POST /users', () => {
+  it('should create a user', (done) => {
+    var email = 'eapp@example.com';
+    var password = '123abc';
+
+    request(app)
+      .post('/users')
+      .send({email, password})
+      .expect(200)
+      .expect((res) => {
+        expect(res.headers['x-auth']).toBeTruthy(); // here the x-auth prop is accessed using bracket and not . as it contains a hyphen in between
+        expect(res.body._id).toBeTruthy();
+        expect(res.body.email).toBe(email);
+      })
+      .end((err, res) => {
+        if (err) {
+          return done(err);
+        }
+        User.findOne({email}).then((user) => {
+          expect(user).toBeTruthy();
+          expect(user.password).not.toBe(password);
+          done();
+        });
+        // .catch((error) => done(error));
+      });
+
+  });
+
+  it('should return validation error is user in invalid', (done) => {
+    request(app)
+      .post('/users')
+      .send({
+        email: 'and',
+        password: '123'
+      })
+      .expect(400)
+      .end(done);
+  });
+  //
+  it('should not create a user if email is already in use', (done) => {
+    request(app)
+      .post('/users')
+      .send({
+        email: "new@example.com",
+        password: "new123"
+      })
+      .expect(400)
+      .end(done);
+  });
+});

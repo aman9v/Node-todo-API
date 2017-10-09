@@ -5,6 +5,7 @@ const mongoose = require('mongoose');
 const validator = require('validator');
 const jwt = require('jsonwebtoken');
 const _ = require('lodash');
+const bcrypt = require('bcryptjs')
 
 // each schema maps to a mongoDB collection and defines the shape of the documents
 // within that collection.
@@ -38,6 +39,10 @@ var UserSchema = new mongoose.Schema({
     }]
 });
 
+// The purpose of the toObject method is to convert the complex mongoose document into a simplified JavaScript object.
+// It removes everything that's not part of the document such as mongoose methods/props. It's not needed in generateAuthToken because
+// we do want to keep the full mongoose object around.
+
 // controls what is sent back when a Mongoose Model is converted to JSON
 UserSchema.methods.toJSON = function () {
   var user = this;
@@ -57,13 +62,50 @@ UserSchema.methods.generateAuthToken = function () {
     access,
   }, 'abc123').toString(); // returns a string token
 
+// The second save call is not creating a new user, it's simply saving the updates to the current user.
+// This is why we don't get an error about duplicate email addresses.
   user.tokens.push({access, token});
   return user.save().then(() => { // this return from the generateAuthToken function.
+    // this returns a promise object which when resolved i.e. the success callback returns a token value as below.
     return token; // passed as the success argument for the next then call.
   }); // this return is from the resolved  prmoise
 };
 // we cannot add custom methods using the way we have done up above.
 // So , we have to use schema for that.
+// Model methods get called with Model as this binding
+UserSchema.statics.findByToken = function (token) {
+  var User = this;
+  var decoded; //
+  try {
+    decoded = jwt.verify(token, 'abc123'); // throws an error if the token is invalid or does not match
+  } catch (error) {
+    // return new Promise((resolve, reject) => {
+    //   reject();
+    // }); // if this code runs, don't run the code just below it
+    return Promise.reject(); // does the exact same thing as the code just above it.
+  } // whatever is passed to reject will be passed to catch or error callback
+
+// successfully decoded the token passed in the header
+  return User.findOne({
+    '_id': decoded._id,
+    'tokens.token': token,
+    'tokens.access': 'auth' // to query a nested document, we use key in quotes
+  });
+}; // anything added to statics object gets added as a Model method as opposed to an instance method
+
+UserSchema.pre('save', function (next) { // pre save hook to hash password before saving it to the db.
+  var user = this;
+
+  if (user.isModified) {
+    bcrypt.genSalt(10, (err, salt) => {
+      bcrypt.hash(user.password, salt, (err, hash) => {
+        user.password = hash; // password is just plain text.
+        next();
+      });
+    });
+
+  }
+}); // function is used as we have to the this binding.
 var User = mongoose.model('User', UserSchema);
 
 module.exports = {User};
