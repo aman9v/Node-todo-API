@@ -1,2 +1,4 @@
 node_modules/
 package-lock.json
+playground/server/config/config.json
+.DS_Store
