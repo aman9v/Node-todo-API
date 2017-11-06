@@ -4,15 +4,6 @@ const jwt = require('jsonwebtoken');
 const {Todo} = require("./../../models/todo");
 const {User} = require("./../../models/user");
 
-const todos = [{
-  _id: new ObjectID(),
-  text: "first todo",
-}, {
-  _id: new ObjectID(),
-  text: "second todo",
-  completed: true,
-  completedAt: 3321
-}];
 
 const userOneId = new ObjectID();
 const userTwoId = new ObjectID();
@@ -31,8 +22,28 @@ const users = [{
 }, {
   _id: userTwoId,
   email: "jen@example.com",
-  password: "secontimepass"
+  password: "secontimepass",
+  tokens: [{
+    access: 'auth',
+    token: jwt.sign({
+      _id: userTwoId,
+      access: 'auth',
+    }, 'abc123').toString()
+  }]
 }];
+
+const todos = [{
+  _id: new ObjectID(),
+  text: "first todo",
+  _creator: userOneId
+}, {
+  _id: new ObjectID(),
+  text: "second todo",
+  completed: true,
+  completedAt: 3321,
+  _creator: userTwoId
+}];
+
 const populateTodos = (done) => {
   Todo.remove({}).then(() => {
     return Todo.insertMany(todos); // returning the promise returned by calling insertMany(todos)

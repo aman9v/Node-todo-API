@@ -70,6 +70,17 @@ UserSchema.methods.generateAuthToken = function () {
     return token; // passed as the success argument for the next then call.
   }); // this return is from the resolved  prmoise
 };
+
+UserSchema.methods.removeToken = function(token) {
+  // $pull operator is a mongoDB lets you remove an item that matches a certain criteria from an array
+  var user = this;
+  return user.update({
+    $pull: { // takes an object that we want to pull from
+// The $pull expression applies the condition to each element of the results array as though it were a top-level document.
+      tokens: {token}
+    }
+  });
+};
 // we cannot add custom methods using the way we have done up above.
 // So , we have to use schema for that.
 // Model methods get called with Model as this binding
@@ -93,6 +104,25 @@ UserSchema.statics.findByToken = function (token) {
   });
 }; // anything added to statics object gets added as a Model method as opposed to an instance method
 
+// return an object with promise or an error if the user doesn't exist
+UserSchema.statics.findByCredentials = function(email, password) {
+  var User = this;
+  User.findOne({email}).then((user) => {
+    if (!user) {
+      return Promise.reject(); // automatically triggers the catch call just below it.
+    }
+    return new Promise((resolve, reject)=> {
+      bcrypt.compare(password, user.password, (err, res) => {
+        if (res === true) {
+          resolve(user);
+        } else {
+          reject(); // triggers catch call inside of server.js
+        }
+      });
+    });
+  }).catch();
+};
+
 UserSchema.pre('save', function (next) { // pre save hook to hash password before saving it to the db.
   var user = this;
 
@@ -106,6 +136,8 @@ UserSchema.pre('save', function (next) { // pre save hook to hash password befor
 
   }
 }); // function is used as we have to the this binding.
+
+
 var User = mongoose.model('User', UserSchema);
 
 module.exports = {User};

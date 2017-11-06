@@ -19,6 +19,7 @@ describe('POST /todos', () => {
 
     request(app)
       .post('/todos')
+      .set('x-auth', users[0].tokens[0].token)
       .send({text}) // supertest converts the object passed to json.
       .expect(200) // check for the status code to be 200
       .expect((res) => {
@@ -40,6 +41,7 @@ describe('POST /todos', () => {
   it('should not create a todo when bad data is sent', (done) => {
     request(app)
       .post('/todos')
+      .set('x-auth', users[0].tokens[0].token)
       .send({})
       .expect(400)
       .end((err, res) => {
@@ -60,8 +62,12 @@ describe(' GET /todos', () => {
   it('should fetch and return all the todos', (done) => {
     request(app)
       .get('/todos')
-      .send()
-      .expect(200, done);
+      .set('x-auth', users[0].tokens[0].token)
+      .expect(200)
+      .expect((res) => {
+          expect(res.body.docs.length).toBe(1); // request.body must contain the same object that was sent in the response
+      })
+      .end(done);
       });
 });
 
@@ -69,6 +75,7 @@ describe('GET /todos/:id' , () => {
   it('should return todo doc', (done) => {
     request(app) // supertest request
       .get(`/todos/${todos[0]._id.toHexString()}`)
+      .set('x-auth', users[0].tokens[0].token)
       .expect(200)
       .expect((res) => {
         expect(res.body.doc.text).toBe(todos[0].text); // this expect is using the jest expect API
@@ -76,18 +83,28 @@ describe('GET /todos/:id' , () => {
       .end(done);
     });
 
+    it('shouldn"t return a todo doc by another user', (done) => {
+      request(app) // supertest request
+        .get(`/todos/${todos[1]._id.toHexString()}`)
+        .set('x-auth', users[0].tokens[0].token)
+        .expect(404)
+        .end(done);
+      });
+
 
 
   it('should return a 404 if todo not found', (done) => {
     var id = new ObjectID().toHexString();
     request(app)
       .get(`/todos/${id}`)
+      .set('x-auth', users[0].tokens[0].token)
       .expect(404, done);
   });
 
   it('should return 404 for non-object ids', (done) => {
     request(app)
       .get('/todos/123abc')
+      .set('x-auth', users[0].tokens[0].token)
       .send()
       .expect(404, done);
   });
@@ -95,10 +112,11 @@ describe('GET /todos/:id' , () => {
 
 describe('DELETE /todos/:id', () => {
   it('should delete a todo from the database', (done) => {
-      var id = todos[0]._id.toHexString();
+      var id = todos[1]._id.toHexString();
 
       request(app)
         .delete(`/todos/${id}`)
+        .set('x-auth', users[1].tokens[0].token)
         .expect(200)
         .expect((res) => {
           expect(res.body.doc._id).toBe(id);
@@ -112,6 +130,7 @@ describe('DELETE /todos/:id', () => {
             done();
           }).catch((error) => done(error));
         });
+        
   });
 
   it('should return a 404 if not found', (done) => {
@@ -234,4 +253,36 @@ describe('POST /users', () => {
       .expect(400)
       .end(done);
   });
+});
+
+describe("POST /users/login", () => {
+  it("should login user and return auth token", (done) => {
+    request(app)
+      .post('/users/login')
+      .send({
+        email: users[1].email,
+        password: users[1].password
+      })
+      .expect(200)
+      .expect((res) => {
+        expect(res.headers['x-auth']).toBeTruthy();
+      })
+      .end((err, res) => { // this is a custom callback so we must call done() somewhere below
+        if (err) {
+          return done(err); // instead of done being called with err, we are calling it ourselves.
+        }
+        User.findById(users[1]._id).then((user) => {
+          expect(user.tokens[1]).toContain({
+            access: 'auth',
+            token: res.headers['x-auth']
+          });
+          done();
+        }).catch((err) => done(err));
+      });
+  });
+
+  //
+  // it('should reject invalid login', (done) => {
+  //
+  // });
 });

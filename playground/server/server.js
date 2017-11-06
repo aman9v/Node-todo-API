@@ -18,9 +18,10 @@ const port = process.env.PORT;
 
 app.use(bodyParser.json()); // .json() is returned that is used as middleware
 
-app.post('/todos', (req, res) => { // callback can be a middleware function
+app.post('/todos', authenticate, (req, res) => { // callback can be a middleware function
   var todo = new Todo({
     text: req.body.text,
+    _creator: req.user._id
   });
   todo.save().then((todo) => {
      res.status(200).send(todo);
@@ -29,22 +30,26 @@ app.post('/todos', (req, res) => { // callback can be a middleware function
   });
 });
 
-app.get('/todos', (req, res) => {
-  Todo.find().then((docs) => {
+//  making a route private is same as getting access to user and token properties of a request.
+app.get('/todos', authenticate, (req, res) => {
+  Todo.find({_creator: req.user._id}).then((docs) => {
     res.status(200).send({docs}); // sending an object allows to add more properties to response like custom status codes.
   }, (error) => {
     res.status(400).send(error);
   });
 });
 
-app.get('/todos/:id', (req, res) => {
+app.get('/todos/:id', authenticate,  (req, res) => {
   var id = req.params.id; // params contains key value pairs
 
   if (!ObjectID.isValid(id)) {
     return res.status(404).send();
   }
 
-  Todo.findById(id).then((doc) => { //success callback
+  Todo.findOne({
+    _id: id,
+    _creator: req.user._id
+  }).then((doc) => { //success callback
     if (!doc) {
       return res.status(404).send();
     }
@@ -54,14 +59,17 @@ app.get('/todos/:id', (req, res) => {
   });
 }); // url parameters
 
-app.delete('/todos/:id', (req, res) => {
+app.delete('/todos/:id', authenticate, (req, res) => {
   var id = req.params.id;
 
   if (!ObjectID.isValid(id)) {
     return res.sendStatus(404);
   }
 
-  Todo.findByIdAndRemove(id).then((doc) => {
+  Todo.findOneAndRemove({
+    _id : id,
+    _creator: req.user._id
+  }).then((doc) => {
     if (!doc) {
       return res.sendStatus(404);
     }
@@ -116,6 +124,25 @@ app.post('/users', (req, res) => {
 app.get('/users/me', authenticate, (req, res) => {
   res.send(req.user);
 });
+
+app.post("/users/login", (req, res) => { // we don't use authenticate middleware as the whole purpose of this route is to get a new token.
+  var body = _.pick(req.body, ['email', 'password']);
+  res.send(body);
+  User.findByCredentials(body.email, body.password).then((user) => { //this is where a new token is created in response to an http request
+    res.send(user);
+  }).catch((error) => {
+    res.sendStatus(400);
+  });
+});
+
+app.delete("/users/me/token", authenticate, (req, res) => {
+  req.user.removeToken(req.token).then(() => {
+    res.sendStatus(200);
+  }, (error) => {
+    res.sendStatus(400);
+  });
+}); // delete token from the currently logged in user.
+
 app.listen(port, () => {
   console.log(`Server up on port ${port}`);
 });
