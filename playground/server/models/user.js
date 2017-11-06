@@ -60,7 +60,7 @@ UserSchema.methods.generateAuthToken = function () {
   var token = jwt.sign({
     _id: user._id.toHexString(),
     access,
-  }, 'abc123').toString(); // returns a string token
+  }, process.env.JWT_SECRET).toString(); // returns a string token
 
 // The second save call is not creating a new user, it's simply saving the updates to the current user.
 // This is why we don't get an error about duplicate email addresses.
@@ -88,7 +88,7 @@ UserSchema.statics.findByToken = function (token) {
   var User = this;
   var decoded; //
   try {
-    decoded = jwt.verify(token, 'abc123'); // throws an error if the token is invalid or does not match
+    decoded = jwt.verify(token, process.env.JWT_SECRET); // throws an error if the token is invalid or does not match
   } catch (error) {
     // return new Promise((resolve, reject) => {
     //   reject();

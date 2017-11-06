@@ -10,6 +10,9 @@ if (env === "test" || env === "development") {
   });
 }
 
+// the idea is to store frequently used variables as environment variables
+// and then reference them later
+
 // if (env === 'development') {
 //   process.env.PORT = 3000;
 //   process.env.MONGODB_URI = 'mongodb://localhost:27017/TodoApp';
