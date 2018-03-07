@@ -6,7 +6,7 @@ const {ObjectID} = require('mongodb');
 const {User} = require('./../models/user');
 var {app} = require('./../server');
 var {Todo} = require('./../models/todo'); // {name} name is exactly the same as the one exported
-const {todos, populateTodos, users, populateUsers} = require('./seed/seed');
+const {todos, populateTodos, users, populateUsers} = require('./seed/seed'); // ES6 object destructuring
 
 beforeEach(populateUsers);
 // seed data was moved to its own separate file.
@@ -130,7 +130,7 @@ describe('DELETE /todos/:id', () => {
             done();
           }).catch((error) => done(error));
         });
-        
+
   });
 
   it('should return a 404 if not found', (done) => {
